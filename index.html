@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แอพวิเคราะห์การเงินและออมเงิน</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">💰 แอพวิเคราะห์การเงิน</h1>
+            <p class="text-gray-600">วิเคราะห์รายรับ-รายจ่าย และวางแผนการออมเงิน</p>
+            
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="mt-4 p-3 rounded-lg text-sm bg-blue-50 border border-blue-200">
+                <div class="flex items-center gap-2">
+                    <div id="statusIcon" class="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span id="statusText">🔄 กำลังเชื่อมต่อ Google Sheets...</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Quick Setup -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                ⚡ ตั้งค่าด่วน - กรอกแค่เงินเดือนก็พอ!
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">เงินเดือนของคุณ (บาท)</label>
+                    <input type="number" id="quickSalary" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="30000" oninput="autoCalculate()">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">รายได้เสริม (ถ้ามี)</label>
+                    <input type="number" id="quickExtra" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg" placeholder="0" oninput="autoCalculate()">
+                </div>
+            </div>
+            <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p class="text-blue-700 text-sm">💡 เราจะคำนวณรายจ่ายโดยประมาณให้คุณตามมาตรฐาน แล้วคุณสามารถปรับแต่งได้ภายหลัง</p>
+            </div>
+        </div>
+
+        <!-- Income & Expense Tracker -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-center mb-4">
+                <div class="bg-gray-100 p-1 rounded-lg">
+                    <button id="expenseTab" onclick="switchTab('expense')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm transition duration-200">
+                        📝 บันทึกรายจ่าย
+                    </button>
+                    <button id="incomeTab" onclick="switchTab('income')" class="px-4 py-2 text-gray-600 rounded-lg text-sm transition duration-200 hover:bg-gray-200">
+                        💰 บันทึกรายได้เสริม
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Expense Tab -->
+            <div id="expenseTabContent" class="tab-content">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    📝 บันทึกรายจ่ายรายวัน
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Expense Form -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">เพิ่มรายจ่าย</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนเงิน (บาท)</label>
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" onclick="setAmount(20)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition duration-200">20</button>
+                                    <button type="button" onclick="setAmount(50)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition duration-200">50</button>
+                                    <button type="button" onclick="setAmount(100)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition duration-200">100</button>
+                                    <button type="button" onclick="setAmount(200)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition duration-200">200</button>
+                                    <button type="button" onclick="setAmount(500)" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm transition duration-200">500</button>
+                                </div>
+                                <input type="number" id="expenseAmount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" placeholder="หรือกรอกจำนวนเอง">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่</label>
+                                <div class="grid grid-cols-2 gap-2" id="categoryButtons">
+                                    <button type="button" onclick="selectCategory('food')" class="category-btn p-2 border-2 border-blue-500 bg-blue-50 text-blue-800 rounded-lg text-sm transition duration-200" data-category="food">
+                                        🍽️ อาหาร
+                                    </button>
+                                    <button type="button" onclick="selectCategory('transport')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="transport">
+                                        🚗 เดินทาง
+                                    </button>
+                                    <button type="button" onclick="selectCategory('housing')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="housing">
+                                        🏠 ที่พัก
+                                    </button>
+                                    <button type="button" onclick="selectCategory('entertainment')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="entertainment">
+                                        🎮 บันเทิง
+                                    </button>
+                                    <button type="button" onclick="selectCategory('bills')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="bills">
+                                        📄 บิล/ค่าใช้จ่าย
+                                    </button>
+                                    <button type="button" onclick="selectCategory('shopping')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="shopping">
+                                        🛍️ ช้อปปิ้ง
+                                    </button>
+                                    <button type="button" onclick="selectCategory('savings')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="savings">
+                                        💰 ออมเงิน
+                                    </button>
+                                    <button type="button" onclick="selectCategory('others')" class="category-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-blue-500 transition duration-200" data-category="others">
+                                        📦 อื่นๆ
+                                    </button>
+                                </div>
+                                <input type="hidden" id="selectedCategory" value="food">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียด (ไม่บังคับ)</label>
+                                <input type="text" id="expenseNote" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="เช่น ข้าวผัด, น้ำมันรถ">
+                            </div>
+                            <button onclick="addExpense()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                ➕ เพิ่มรายจ่าย
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Add Buttons -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">เพิ่มด่วน</h3>
+                        <div class="grid grid-cols-2 gap-2 mb-4" id="quickButtonsContainer">
+                            <!-- Quick buttons will be rendered here -->
+                        </div>
+                        
+                        <!-- Quick Buttons Management -->
+                        <div class="mb-4">
+                            <button onclick="toggleQuickButtonsEditor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-200 text-sm">
+                                ⚙️ จัดการปุ่มด่วน
+                            </button>
+                            <div id="quickButtonsEditor" class="hidden mt-3 p-4 bg-gray-50 rounded-lg">
+                                <h4 class="font-medium text-gray-800 mb-3">เพิ่ม/ลบปุ่มด่วน</h4>
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div class="space-y-3">
+                                        <div class="flex gap-2">
+                                            <input type="text" id="newButtonName" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm" placeholder="ชื่อปุ่ม เช่น กาแฟ">
+                                            <input type="number" id="newButtonAmount" class="w-20 px-3 py-2 border border-gray-300 rounded text-sm" placeholder="50">
+                                            <select id="newButtonCategory" class="px-3 py-2 border border-gray-300 rounded text-sm">
+                                                <option value="food">🍽️ อาหาร</option>
+                                                <option value="transport">🚗 เดินทาง</option>
+                                                <option value="housing">🏠 ที่พัก</option>
+                                                <option value="entertainment">🎮 บันเทิง</option>
+                                                <option value="bills">📄 บิล/ค่าใช้จ่าย</option>
+                                                <option value="shopping">🛍️ ช้อปปิ้ง</option>
+                                                <option value="savings">💰 ออมเงิน</option>
+                                                <option value="others">📦 อื่นๆ</option>
+                                            </select>
+                                            <button onclick="addCustomQuickButton()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm">เพิ่ม</button>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-2">เลือกอีโมจิ (คลิกเพื่อเพิ่มในชื่อปุ่ม):</label>
+                                            <div class="grid grid-cols-10 gap-1 p-2 bg-gray-50 rounded-lg">
+                                                <button type="button" onclick="addEmojiToButtonName('☕')" class="p-1 hover:bg-gray-200 rounded text-sm">☕</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🍔')" class="p-1 hover:bg-gray-200 rounded text-sm">🍔</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🍕')" class="p-1 hover:bg-gray-200 rounded text-sm">🍕</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🍜')" class="p-1 hover:bg-gray-200 rounded text-sm">🍜</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🚌')" class="p-1 hover:bg-gray-200 rounded text-sm">🚌</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🚕')" class="p-1 hover:bg-gray-200 rounded text-sm">🚕</button>
+                                                <button type="button" onclick="addEmojiToButtonName('⛽')" class="p-1 hover:bg-gray-200 rounded text-sm">⛽</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🎬')" class="p-1 hover:bg-gray-200 rounded text-sm">🎬</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🎮')" class="p-1 hover:bg-gray-200 rounded text-sm">🎮</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🎵')" class="p-1 hover:bg-gray-200 rounded text-sm">🎵</button>
+                                                <button type="button" onclick="addEmojiToButtonName('💡')" class="p-1 hover:bg-gray-200 rounded text-sm">💡</button>
+                                                <button type="button" onclick="addEmojiToButtonName('💧')" class="p-1 hover:bg-gray-200 rounded text-sm">💧</button>
+                                                <button type="button" onclick="addEmojiToButtonName('📱')" class="p-1 hover:bg-gray-200 rounded text-sm">📱</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🏥')" class="p-1 hover:bg-gray-200 rounded text-sm">🏥</button>
+                                                <button type="button" onclick="addEmojiToButtonName('👕')" class="p-1 hover:bg-gray-200 rounded text-sm">👕</button>
+                                                <button type="button" onclick="addEmojiToButtonName('👟')" class="p-1 hover:bg-gray-200 rounded text-sm">👟</button>
+                                                <button type="button" onclick="addEmojiToButtonName('💄')" class="p-1 hover:bg-gray-200 rounded text-sm">💄</button>
+                                                <button type="button" onclick="addEmojiToButtonName('📚')" class="p-1 hover:bg-gray-200 rounded text-sm">📚</button>
+                                                <button type="button" onclick="addEmojiToButtonName('💰')" class="p-1 hover:bg-gray-200 rounded text-sm">💰</button>
+                                                <button type="button" onclick="addEmojiToButtonName('🎁')" class="p-1 hover:bg-gray-200 rounded text-sm">🎁</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 mt-2">
+                                        <button onclick="resetToDefaultButtons()" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm">🔄 คืนปุ่ม Default</button>
+                                    </div>
+                                    <div class="text-xs text-gray-600">💡 เคล็ดลับ: ใส่อีโมจิในชื่อปุ่มได้ เช่น ☕ กาแฟ</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Today's Summary -->
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">📊 สรุปวันนี้</h4>
+                            <div id="todaySummary" class="text-sm text-gray-600">
+                                ยังไม่มีรายจ่าย
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Income Tab -->
+            <div id="incomeTabContent" class="tab-content hidden">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    💰 บันทึกรายได้เสริม
+                </h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Income Form -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">เพิ่มรายได้เสริม</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนเงิน (บาท)</label>
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" onclick="setIncomeAmount(500)" class="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-sm transition duration-200">500</button>
+                                    <button type="button" onclick="setIncomeAmount(1000)" class="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-sm transition duration-200">1000</button>
+                                    <button type="button" onclick="setIncomeAmount(2000)" class="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-sm transition duration-200">2000</button>
+                                    <button type="button" onclick="setIncomeAmount(5000)" class="px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded text-sm transition duration-200">5000</button>
+                                </div>
+                                <input type="number" id="incomeAmount" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm" placeholder="หรือกรอกจำนวนเอง">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ประเภทรายได้</label>
+                                <div class="grid grid-cols-2 gap-2" id="incomeTypeButtons">
+                                    <button type="button" onclick="selectIncomeType('freelance')" class="income-type-btn p-2 border-2 border-green-500 bg-green-50 text-green-800 rounded-lg text-sm transition duration-200" data-type="freelance">
+                                        💼 งานฟรีแลนซ์
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('commission')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="commission">
+                                        💰 คอมมิชชั่น
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('parttime')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="parttime">
+                                        ⏰ งานพาร์ทไทม์
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('bonus')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="bonus">
+                                        🎁 โบนัส
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('investment')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="investment">
+                                        📈 การลงทุน
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('selling')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="selling">
+                                        🛒 ขายของ
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('gift')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="gift">
+                                        🎉 ของขวัญ
+                                    </button>
+                                    <button type="button" onclick="selectIncomeType('others')" class="income-type-btn p-2 border-2 border-gray-300 rounded-lg text-sm hover:border-green-500 transition duration-200" data-type="others">
+                                        📦 อื่นๆ
+                                    </button>
+                                </div>
+                                <input type="hidden" id="selectedIncomeType" value="freelance">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียด (ไม่บังคับ)</label>
+                                <input type="text" id="incomeNote" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" placeholder="เช่น ขายเสื้อผ้า, คอมมิชชั่นขายประกัน">
+                            </div>
+                            <button onclick="addIncome()" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                                ➕ เพิ่มรายได้เสริม
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Income Summary -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-700 mb-3">สรุปรายได้เสริม</h3>
+                        
+                        <!-- This Month Summary -->
+                        <div class="p-4 bg-green-50 rounded-lg mb-4">
+                            <h4 class="font-medium text-green-800 mb-2">📊 เดือนนี้</h4>
+                            <div id="monthlyIncomeSummary" class="text-sm text-green-600">
+                                ยังไม่มีรายได้เสริม
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Income Buttons -->
+                        <div class="mb-4">
+                            <h4 class="font-medium text-gray-800 mb-2">⚡ เพิ่มด่วน</h4>
+                            <div class="grid grid-cols-2 gap-2" id="quickIncomeButtons">
+                                <button onclick="quickAddIncome('commission', 1000, 'คอมมิชชั่น')" class="p-2 bg-green-100 hover:bg-green-200 text-green-800 rounded text-sm">💰 คอมมิชชั่น<br><span class="text-xs">1,000 บาท</span></button>
+                                <button onclick="quickAddIncome('freelance', 2000, 'งานฟรีแลนซ์')" class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-sm">💼 ฟรีแลนซ์<br><span class="text-xs">2,000 บาท</span></button>
+                                <button onclick="quickAddIncome('selling', 500, 'ขายของออนไลน์')" class="p-2 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded text-sm">🛒 ขายของ<br><span class="text-xs">500 บาท</span></button>
+                                <button onclick="quickAddIncome('parttime', 1500, 'งานพาร์ทไทม์')" class="p-2 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded text-sm">⏰ พาร์ทไทม์<br><span class="text-xs">1,500 บาท</span></button>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Income -->
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <h4 class="font-medium text-gray-800 mb-2">📋 รายได้ล่าสุด</h4>
+                            <div id="recentIncomeList" class="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                                ยังไม่มีรายได้เสริม
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense History -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">📋 ประวัติรายจ่าย</h3>
+                <div class="flex gap-2">
+                    <button onclick="showExpenseHistory('today')" id="todayBtn" class="px-3 py-1 bg-blue-600 text-white rounded text-sm">วันนี้</button>
+                    <button onclick="showExpenseHistory('week')" id="weekBtn" class="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm">สัปดาห์นี้</button>
+                    <button onclick="showExpenseHistory('month')" id="monthBtn" class="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm">เดือนนี้</button>
+                    <button onclick="clearAllExpenses()" class="px-3 py-1 bg-red-500 text-white rounded text-sm">ล้างข้อมูล</button>
+                </div>
+            </div>
+            <div id="expenseHistory" class="space-y-2 max-h-60 overflow-y-auto">
+                <div class="text-center text-gray-500 py-4">ยังไม่มีรายจ่าย</div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Income Input -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    💵 รายรับประจำเดือน
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เงินเดือน (บาท)</label>
+                        <input type="number" id="salary" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="30000" oninput="calculateFinances()">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">รายได้เสริม (บาท)</label>
+                        <input type="number" id="extraIncome" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0" oninput="calculateFinances()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expenses Input -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    💸 รายจ่ายประจำเดือน
+                </h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium text-gray-700">ค่าอาหาร</label>
+                        <input type="number" id="food" class="w-28 px-3 py-2 border border-gray-300 rounded text-right" placeholder="8000" oninput="calculateFinances()">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium text-gray-700">ค่าเดินทาง</label>
+                        <input type="number" id="transport" class="w-28 px-3 py-2 border border-gray-300 rounded text-right" placeholder="3000" oninput="calculateFinances()">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium text-gray-700">ค่าที่พัก</label>
+                        <input type="number" id="housing" class="w-28 px-3 py-2 border border-gray-300 rounded text-right" placeholder="8000" oninput="calculateFinances()">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium text-gray-700">ค่าใช้จ่ายอื่นๆ</label>
+                        <input type="number" id="others" class="w-28 px-3 py-2 border border-gray-300 rounded text-right" placeholder="5000" oninput="calculateFinances()">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium text-gray-700">ความบันเทิง</label>
+                        <input type="number" id="entertainment" class="w-28 px-3 py-2 border border-gray-300 rounded text-right" placeholder="4000" oninput="calculateFinances()">
+                    </div>
+                </div>
+                <button onclick="resetToRecommended()" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition duration-200 text-sm">
+                    รีเซ็ตเป็นค่าแนะนำ
+                </button>
+            </div>
+
+            <!-- Summary -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                    📊 สรุปการเงิน
+                </h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="text-green-700 font-medium">รายรับรวม</span>
+                        <span id="totalIncome" class="text-green-700 font-bold">0 บาท</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <span class="text-red-700 font-medium">รายจ่ายรวม</span>
+                        <span id="totalExpenses" class="text-red-700 font-bold">0 บาท</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span class="text-blue-700 font-medium">เงินเหลือ</span>
+                        <span id="remaining" class="text-blue-700 font-bold">0 บาท</span>
+                    </div>
+                    <div class="mt-4 p-3 bg-yellow-50 rounded-lg">
+                        <div class="text-yellow-700 font-medium mb-2">เปอร์เซ็นต์การออม</div>
+                        <div id="savingPercentage" class="text-2xl font-bold text-yellow-700">0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts and Analysis -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Expense Chart -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">📈 สัดส่วนรายจ่าย</h3>
+                <div class="w-full h-80 flex items-center justify-center">
+                    <canvas id="expenseChart" style="max-width: 350px; max-height: 350px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Savings Plan -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 แผนการออมเงิน</h3>
+                <div id="savingsAnalysis" class="space-y-4">
+                    <div class="text-center text-gray-500">กรุณากรอกข้อมูลและกดคำนวณ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Savings Calculator -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">⏰ คำนวณเวลาออมเงินด่วน</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">เป้าหมาย (บาท)</label>
+                    <input type="number" id="quickCalcTarget" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="50000" oninput="quickCalculateTime()">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">ออมต่อเดือน (บาท)</label>
+                    <input type="number" id="quickCalcMonthly" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="5000" oninput="quickCalculateTime()">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">เงินที่มีอยู่ (บาท)</label>
+                    <input type="number" id="quickCalcCurrent" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="0" oninput="quickCalculateTime()">
+                </div>
+            </div>
+            <div id="quickCalcResult" class="mt-4 p-4 bg-blue-50 rounded-lg text-center">
+                <div class="text-blue-700">💡 กรอกข้อมูลเพื่อคำนวณเวลา</div>
+            </div>
+        </div>
+
+        <!-- Savings Goals -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">🏆 เป้าหมายการออมเงิน</h3>
+                <button onclick="addNewGoal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                    ➕ เพิ่มเป้าหมาย
+                </button>
+            </div>
+            <div id="goalsContainer" class="space-y-4">
+                <!-- Goals will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let expenseChart = null;
+        let dailyExpenses = [];
+        let customQuickButtons = [];
+        let selectedCategory = 'food';
+        let savingsGoals = [];
+        let extraIncomes = [];
+        let selectedIncomeType = 'freelance';
+        let currentTab = 'expense';
+        
+        // Google Apps Script Configuration
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbYwZLAiycPP4WBV7Y2oPwemnq7iwnsTn2t68dFaFHQuBnlc9BFf7rPc2IktIpwW4b/exec';
+        const GOOGLE_SHEET_ID = '1Lj18zZfSLQvVhgdmUGZvTbAZd92eFunJchdomy2Uk_U';
+        let isOnlineMode = false; // จะเปลี่ยนเป็น true เมื่อเชื่อมต่อสำเร็จ
+
+        // Google Sheets API Functions
+        async function callGoogleScript(action, data = {}) {
+            if (!GOOGLE_SCRIPT_URL) {
+                console.log('Google Script URL not configured, using localStorage');
+                return null;
+            }
+            
+            try {
+                // Use JSONP method directly to avoid CORS issues
+                return await callGoogleScriptJSONP(action, data);
+                
+            } catch (error) {
+                console.error('Google Script API Error:', error);
+                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้ กำลังใช้งานแบบ offline', 'warning');
+                return null;
+            }
+        }
+
+        // Alternative JSONP-style method for Google Apps Script
+        function callGoogleScriptJSONP(action, data = {}) {
+            return new Promise((resolve, reject) => {
+                // Create a unique callback name
+                const callbackName = 'googleScriptCallback_' + Date.now();
+                console.log('Creating JSONP request:', { action, data, callbackName });
+                
+                // Create the callback function
+                window[callbackName] = function(response) {
+                    console.log('JSONP response received:', response);
+                    // Clean up
+                    if (document.head.contains(script)) {
+                        document.head.removeChild(script);
+                    }
+                    delete window[callbackName];
+                    resolve(response);
+                };
+                
+                // Create script element
+                const script = document.createElement('script');
+                const params = new URLSearchParams({
+                    action: action,
+                    data: JSON.stringify(data),
+                    callback: callbackName
+                });
+                
+                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
+                console.log('JSONP URL:', url);
+                script.src = url;
+                
+                script.onerror = (error) => {
+                    console.error('Script loading error:', error);
+                    if (document.head.contains(script)) {
+                        document.head.removeChild(script);
+                    }
+                    delete window[callbackName];
+                    reject(new Error('Script loading failed'));
+                };
+                
+                // Add timeout
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        console.log('JSONP request timeout');
+                        if (document.head.contains(script)) {
+                            document.head.removeChild(script);
+                        }
+                        delete window[callbackName];
+                        reject(new Error('Request timeout'));
+                    }
+                }, 15000); // Increased timeout to 15 seconds
+                
+                document.head.appendChild(script);
+            });
+        }
+
+        // Update connection status display
+        function updateConnectionStatus(isOnline, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusText = document.getElementById('statusText');
+            
+            if (isOnline) {
+                statusDiv.className = 'mt-4 p-3 rounded-lg text-sm bg-green-50 border border-green-200';
+                statusIcon.className = 'w-3 h-3 rounded-full bg-green-500';
+                statusText.textContent = '🌐 เชื่อมต่อ Google Sheets แล้ว - ข้อมูลจะ sync อัตโนมัติ';
+            } else {
+                statusDiv.className = 'mt-4 p-3 rounded-lg text-sm bg-blue-50 border border-blue-200';
+                statusIcon.className = 'w-3 h-3 rounded-full bg-blue-500';
+                statusText.textContent = '💾 โหมด Offline - ข้อมูลเก็บในเครื่อง';
+            }
+        }
+
+        // Test connection to Google Sheets
+        async function testConnection() {
+            console.log('Testing connection to Google Sheets...');
+            
+            try {
+                const result = await callGoogleScript('test', { timestamp: Date.now() });
+                console.log('Connection test result:', result);
+                
+                if (result && result.success) {
+                    isOnlineMode = true;
+                    updateConnectionStatus(true);
+                    showMessage('เชื่อมต่อ Google Sheets สำเร็จ! 🎉', 'success');
+                    await loadDataFromSheets();
+                } else {
+                    throw new Error('Connection test failed');
+                }
+            } catch (error) {
+                console.error('Connection test error:', error);
+                isOnlineMode = false;
+                updateConnectionStatus(false);
+                showMessage('ใช้งานแบบ offline - ข้อมูลจะเก็บในเครื่อง', 'info');
+            }
+        }
+
+        // Load data from Google Sheets
+        async function loadDataFromSheets() {
+            if (!isOnlineMode) return;
+            
+            try {
+                // Load expenses
+                const expensesResult = await callGoogleScript('getExpenses');
+                if (expensesResult && expensesResult.success) {
+                    dailyExpenses = expensesResult.data || [];
+                }
+                
+                // Load incomes
+                const incomesResult = await callGoogleScript('getIncomes');
+                if (incomesResult && incomesResult.success) {
+                    extraIncomes = incomesResult.data || [];
+                }
+                
+                // Load goals
+                const goalsResult = await callGoogleScript('getGoals');
+                if (goalsResult && goalsResult.success) {
+                    savingsGoals = goalsResult.data || [];
+                }
+                
+                // Load settings
+                const settingsResult = await callGoogleScript('getSettings');
+                if (settingsResult && settingsResult.success && settingsResult.data) {
+                    const settings = settingsResult.data;
+                    if (settings.salary) document.getElementById('salary').value = settings.salary;
+                    if (settings.extraIncome) document.getElementById('extraIncome').value = settings.extraIncome;
+                    if (settings.food) document.getElementById('food').value = settings.food;
+                    if (settings.transport) document.getElementById('transport').value = settings.transport;
+                    if (settings.housing) document.getElementById('housing').value = settings.housing;
+                    if (settings.others) document.getElementById('others').value = settings.others;
+                    if (settings.entertainment) document.getElementById('entertainment').value = settings.entertainment;
+                }
+                
+                updateDisplay();
+                updateIncomeDisplay();
+                renderGoals();
+                calculateFinances();
+                
+            } catch (error) {
+                console.error('Error loading data from sheets:', error);
+            }
+        }
+
+        // Save data to Google Sheets
+        async function saveDataToSheets() {
+            if (!isOnlineMode) return;
+            
+            try {
+                // Save settings
+                const settings = {
+                    salary: document.getElementById('salary').value,
+                    extraIncome: document.getElementById('extraIncome').value,
+                    food: document.getElementById('food').value,
+                    transport: document.getElementById('transport').value,
+                    housing: document.getElementById('housing').value,
+                    others: document.getElementById('others').value,
+                    entertainment: document.getElementById('entertainment').value
+                };
+                
+                await callGoogleScript('saveSettings', settings);
+                await callGoogleScript('saveExpenses', dailyExpenses);
+                await callGoogleScript('saveIncomes', extraIncomes);
+                await callGoogleScript('saveGoals', savingsGoals);
+                
+            } catch (error) {
+                console.error('Error saving data to sheets:', error);
+            }
+        }
+
+        // Custom message system to replace alert/confirm
+        function showMessage(message, type = 'info') {
+            // Remove existing message if any
+            const existingMessage = document.getElementById('customMessage');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'customMessage';
+            messageDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                info: 'bg-blue-500 text-white',
+                warning: 'bg-yellow-500 text-white'
+            };
+            
+            messageDiv.className += ` ${colors[type] || colors.info}`;
+            messageDiv.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">×</button>
+                </div>
+            `;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Animate in
+            setTimeout(() => {
+                messageDiv.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.classList.add('translate-x-full');
+                    setTimeout(() => messageDiv.remove(), 300);
+                }
+            }, 3000);
+        }
+
+        // Custom confirmation dialog
+        function showConfirmDialog(title, message, onConfirm) {
+            // Remove existing dialog if any
+            const existingDialog = document.getElementById('customDialog');
+            if (existingDialog) {
+                existingDialog.remove();
+            }
+
+            const dialogDiv = document.createElement('div');
+            dialogDiv.id = 'customDialog';
+            dialogDiv.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+            
+            // Create confirm button handler
+            const confirmHandler = () => {
+                document.getElementById('customDialog').remove();
+                onConfirm();
+            };
+            
+            dialogDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">${title}</h3>
+                    <p class="text-gray-600 mb-6">${message}</p>
+                    <div class="flex gap-3 justify-end">
+                        <button onclick="document.getElementById('customDialog').remove()" 
+                                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition duration-200">
+                            ยกเลิก
+                        </button>
+                        <button id="confirmBtn" 
+                                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition duration-200">
+                            ยืนยัน
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialogDiv);
+            
+            // Add event listener to confirm button
+            document.getElementById('confirmBtn').addEventListener('click', confirmHandler);
+        }
+
+        // Default quick buttons
+        const defaultQuickButtons = [
+            { id: 'btn1', name: '🍳 อาหารเช้า', amount: 50, category: 'food' },
+            { id: 'btn2', name: '🍛 อาหารกลางวัน', amount: 80, category: 'food' },
+            { id: 'btn3', name: '🍜 อาหารเย็น', amount: 60, category: 'food' },
+            { id: 'btn4', name: '🚌 รถเมล์', amount: 30, category: 'transport' },
+            { id: 'btn5', name: '🚕 แท็กซี่', amount: 100, category: 'transport' },
+            { id: 'btn6', name: '🎬 ดูหนัง', amount: 150, category: 'entertainment' }
+        ];
+
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.getElementById('expenseTab').className = tab === 'expense' 
+                ? 'px-4 py-2 bg-blue-600 text-white rounded-lg text-sm transition duration-200'
+                : 'px-4 py-2 text-gray-600 rounded-lg text-sm transition duration-200 hover:bg-gray-200';
+            
+            document.getElementById('incomeTab').className = tab === 'income' 
+                ? 'px-4 py-2 bg-green-600 text-white rounded-lg text-sm transition duration-200'
+                : 'px-4 py-2 text-gray-600 rounded-lg text-sm transition duration-200 hover:bg-gray-200';
+            
+            // Show/hide content
+            document.getElementById('expenseTabContent').classList.toggle('hidden', tab !== 'expense');
+            document.getElementById('incomeTabContent').classList.toggle('hidden', tab !== 'income');
+            
+            if (tab === 'income') {
+                updateIncomeDisplay();
+            }
+        }
+
+        // Load data from localStorage
+        function loadData() {
+            const savedExpenses = localStorage.getItem('dailyExpenses');
+            if (savedExpenses) {
+                dailyExpenses = JSON.parse(savedExpenses);
+            }
+            
+            const savedButtons = localStorage.getItem('customQuickButtons');
+            if (savedButtons) {
+                customQuickButtons = JSON.parse(savedButtons);
+            }
+            
+            const savedIncomes = localStorage.getItem('extraIncomes');
+            if (savedIncomes) {
+                extraIncomes = JSON.parse(savedIncomes);
+            }
+            
+            const savedGoals = localStorage.getItem('savingsGoals');
+            if (savedGoals) {
+                savingsGoals = JSON.parse(savedGoals);
+            } else {
+                // Simple default goals
+                savingsGoals = [
+                    { id: 'goal1', name: 'ซื้อโทรศัพท์ใหม่', emoji: '📱', target: 30000, current: 0, monthlyContribution: 0 },
+                    { id: 'goal2', name: 'เที่ยวทะเล', emoji: '🏖️', target: 15000, current: 0, monthlyContribution: 0 }
+                ];
+            }
+        }
+
+        // Save data to localStorage and Google Sheets
+        function saveData() {
+            // Always save to localStorage as backup
+            localStorage.setItem('dailyExpenses', JSON.stringify(dailyExpenses));
+            localStorage.setItem('customQuickButtons', JSON.stringify(customQuickButtons));
+            localStorage.setItem('savingsGoals', JSON.stringify(savingsGoals));
+            localStorage.setItem('extraIncomes', JSON.stringify(extraIncomes));
+            
+            // Also save to Google Sheets if online
+            if (isOnlineMode) {
+                saveDataToSheets();
+            }
+        }
+
+        // Set income amount
+        function setIncomeAmount(amount) {
+            document.getElementById('incomeAmount').value = amount;
+        }
+
+        // Select income type
+        function selectIncomeType(type) {
+            selectedIncomeType = type;
+            document.getElementById('selectedIncomeType').value = type;
+            
+            // Update button styles
+            document.querySelectorAll('.income-type-btn').forEach(btn => {
+                btn.classList.remove('border-green-500', 'bg-green-50', 'text-green-800');
+                btn.classList.add('border-gray-300');
+            });
+            
+            const selectedBtn = document.querySelector(`[data-type="${type}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-gray-300');
+                selectedBtn.classList.add('border-green-500', 'bg-green-50', 'text-green-800');
+            }
+        }
+
+        // Add income
+        async function addIncome() {
+            const amount = parseFloat(document.getElementById('incomeAmount').value);
+            const note = document.getElementById('incomeNote').value.trim();
+            
+            if (!amount || amount <= 0) {
+                showMessage('กรุณากรอกจำนวนเงินที่ถูกต้อง', 'error');
+                return;
+            }
+            
+            const income = {
+                id: Date.now(),
+                amount: amount,
+                type: selectedIncomeType,
+                note: note || 'ไม่ระบุ',
+                date: new Date().toISOString(),
+                dateString: new Date().toLocaleDateString('th-TH')
+            };
+            
+            extraIncomes.unshift(income);
+            
+            // Save to localStorage first
+            localStorage.setItem('extraIncomes', JSON.stringify(extraIncomes));
+            
+            // Try to sync to Google Sheets
+            if (isOnlineMode) {
+                try {
+                    const result = await callGoogleScript('addIncome', income);
+                    if (result && result.success) {
+                        console.log('Income synced to Google Sheets successfully');
+                    } else {
+                        console.error('Failed to sync income to Google Sheets');
+                    }
+                } catch (error) {
+                    console.error('Error syncing income:', error);
+                }
+            }
+            
+            // Clear form
+            document.getElementById('incomeAmount').value = '';
+            document.getElementById('incomeNote').value = '';
+            
+            updateIncomeDisplay();
+            updateExtraIncomeInMainForm();
+            showMessage('เพิ่มรายได้เสริมเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Quick add income
+        async function quickAddIncome(type, amount, note) {
+            const income = {
+                id: Date.now(),
+                amount: amount,
+                type: type,
+                note: note,
+                date: new Date().toISOString(),
+                dateString: new Date().toLocaleDateString('th-TH')
+            };
+            
+            extraIncomes.unshift(income);
+            
+            // Save to localStorage first
+            localStorage.setItem('extraIncomes', JSON.stringify(extraIncomes));
+            
+            // Try to sync to Google Sheets
+            if (isOnlineMode) {
+                try {
+                    const result = await callGoogleScript('addIncome', income);
+                    if (result && result.success) {
+                        console.log('Quick income synced to Google Sheets successfully');
+                    } else {
+                        console.error('Failed to sync quick income to Google Sheets');
+                    }
+                } catch (error) {
+                    console.error('Error syncing quick income:', error);
+                }
+            }
+            
+            updateIncomeDisplay();
+            updateExtraIncomeInMainForm();
+            showMessage(`เพิ่ม${note} ${amount.toLocaleString()} บาทแล้ว!`, 'success');
+        }
+
+        // Update income display
+        function updateIncomeDisplay() {
+            updateMonthlyIncomeSummary();
+            updateRecentIncomeList();
+        }
+
+        // Update monthly income summary
+        function updateMonthlyIncomeSummary() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            const monthlyIncomes = extraIncomes.filter(income => {
+                const incomeDate = new Date(income.date);
+                return incomeDate.getMonth() === currentMonth && incomeDate.getFullYear() === currentYear;
+            });
+            
+            const summaryDiv = document.getElementById('monthlyIncomeSummary');
+            
+            if (monthlyIncomes.length === 0) {
+                summaryDiv.innerHTML = 'ยังไม่มีรายได้เสริม';
+                return;
+            }
+            
+            const total = monthlyIncomes.reduce((sum, income) => sum + income.amount, 0);
+            const typeTotals = {};
+            
+            monthlyIncomes.forEach(income => {
+                typeTotals[income.type] = (typeTotals[income.type] || 0) + income.amount;
+            });
+            
+            const typeNames = {
+                freelance: '💼 งานฟรีแลนซ์',
+                commission: '💰 คอมมิชชั่น',
+                parttime: '⏰ งานพาร์ทไทม์',
+                bonus: '🎁 โบนัส',
+                investment: '📈 การลงทุน',
+                selling: '🛒 ขายของ',
+                gift: '🎉 ของขวัญ',
+                others: '📦 อื่นๆ'
+            };
+            
+            let summaryHTML = `<div class="font-bold text-green-800 mb-2">รวม: ${total.toLocaleString()} บาท</div>`;
+            
+            Object.entries(typeTotals).forEach(([type, amount]) => {
+                summaryHTML += `<div class="flex justify-between text-sm">
+                    <span>${typeNames[type]}</span>
+                    <span>${amount.toLocaleString()} บาท</span>
+                </div>`;
+            });
+            
+            summaryDiv.innerHTML = summaryHTML;
+        }
+
+        // Update recent income list
+        function updateRecentIncomeList() {
+            const recentDiv = document.getElementById('recentIncomeList');
+            
+            if (extraIncomes.length === 0) {
+                recentDiv.innerHTML = 'ยังไม่มีรายได้เสริม';
+                return;
+            }
+            
+            const typeNames = {
+                freelance: '💼 งานฟรีแลนซ์',
+                commission: '💰 คอมมิชชั่น',
+                parttime: '⏰ งานพาร์ทไทม์',
+                bonus: '🎁 โบนัส',
+                investment: '📈 การลงทุน',
+                selling: '🛒 ขายของ',
+                gift: '🎉 ของขวัญ',
+                others: '📦 อื่นๆ'
+            };
+            
+            let recentHTML = '';
+            const recentIncomes = extraIncomes.slice(0, 5); // Show last 5
+            
+            recentIncomes.forEach(income => {
+                const time = new Date(income.date).toLocaleTimeString('th-TH', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                recentHTML += `
+                    <div class="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs">${typeNames[income.type]}</span>
+                                <span class="text-xs text-gray-500">${time}</span>
+                            </div>
+                            <div class="text-xs text-gray-600">${income.note}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-green-700 text-sm">+${income.amount.toLocaleString()}</div>
+                            <button onclick="deleteIncome('${income.id}')" class="text-red-500 hover:text-red-700 text-xs">ลบ</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            recentDiv.innerHTML = recentHTML;
+        }
+
+        // Delete income
+        function deleteIncome(incomeId) {
+            extraIncomes = extraIncomes.filter(income => income.id.toString() !== incomeId.toString());
+            saveData();
+            updateIncomeDisplay();
+            updateExtraIncomeInMainForm();
+            showMessage('ลบรายได้เสริมเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Update extra income in main form
+        function updateExtraIncomeInMainForm() {
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            const monthlyIncomes = extraIncomes.filter(income => {
+                const incomeDate = new Date(income.date);
+                return incomeDate.getMonth() === currentMonth && incomeDate.getFullYear() === currentYear;
+            });
+            
+            const total = monthlyIncomes.reduce((sum, income) => sum + income.amount, 0);
+            document.getElementById('extraIncome').value = total;
+            calculateFinances();
+        }
+
+        // Set amount in input field
+        function setAmount(amount) {
+            document.getElementById('expenseAmount').value = amount;
+        }
+
+        // Select category
+        function selectCategory(category) {
+            selectedCategory = category;
+            document.getElementById('selectedCategory').value = category;
+            
+            // Update button styles
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-800');
+                btn.classList.add('border-gray-300');
+            });
+            
+            const selectedBtn = document.querySelector(`[data-category="${category}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-gray-300');
+                selectedBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-800');
+            }
+        }
+
+        // Add expense
+        async function addExpense() {
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const note = document.getElementById('expenseNote').value.trim();
+            
+            if (!amount || amount <= 0) {
+                showMessage('กรุณากรอกจำนวนเงินที่ถูกต้อง', 'error');
+                return;
+            }
+            
+            const expense = {
+                id: Date.now(),
+                amount: amount,
+                category: selectedCategory,
+                note: note || 'ไม่ระบุ',
+                date: new Date().toISOString(),
+                dateString: new Date().toLocaleDateString('th-TH')
+            };
+            
+            dailyExpenses.unshift(expense);
+            
+            // Save to localStorage first
+            localStorage.setItem('dailyExpenses', JSON.stringify(dailyExpenses));
+            
+            // Try to sync to Google Sheets
+            if (isOnlineMode) {
+                try {
+                    const result = await callGoogleScript('addExpense', expense);
+                    if (result && result.success) {
+                        console.log('Expense synced to Google Sheets successfully');
+                    } else {
+                        console.error('Failed to sync expense to Google Sheets');
+                    }
+                } catch (error) {
+                    console.error('Error syncing expense:', error);
+                }
+            }
+            
+            // Clear form
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseNote').value = '';
+            
+            updateDisplay();
+            showMessage('เพิ่มรายจ่ายเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Quick add expense
+        async function quickAddExpense(category, amount, note) {
+            const expense = {
+                id: Date.now(),
+                amount: amount,
+                category: category,
+                note: note,
+                date: new Date().toISOString(),
+                dateString: new Date().toLocaleDateString('th-TH')
+            };
+            
+            dailyExpenses.unshift(expense);
+            
+            // Save to localStorage first
+            localStorage.setItem('dailyExpenses', JSON.stringify(dailyExpenses));
+            
+            // Try to sync to Google Sheets
+            if (isOnlineMode) {
+                try {
+                    const result = await callGoogleScript('addExpense', expense);
+                    if (result && result.success) {
+                        console.log('Quick expense synced to Google Sheets successfully');
+                    } else {
+                        console.error('Failed to sync quick expense to Google Sheets');
+                    }
+                } catch (error) {
+                    console.error('Error syncing quick expense:', error);
+                }
+            }
+            
+            updateDisplay();
+            showMessage(`เพิ่ม${note} ${amount.toLocaleString()} บาทแล้ว!`, 'success');
+        }
+
+        // Toggle quick buttons editor
+        function toggleQuickButtonsEditor() {
+            const editor = document.getElementById('quickButtonsEditor');
+            editor.classList.toggle('hidden');
+        }
+
+        // Add custom quick button
+        function addCustomQuickButton() {
+            const name = document.getElementById('newButtonName').value.trim();
+            const amount = parseFloat(document.getElementById('newButtonAmount').value);
+            const category = document.getElementById('newButtonCategory').value;
+
+            if (!name || !amount || amount <= 0) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            const newButton = {
+                id: 'custom_' + Date.now(),
+                name: name,
+                amount: amount,
+                category: category
+            };
+
+            customQuickButtons.push(newButton);
+            saveData();
+
+            // Clear form
+            document.getElementById('newButtonName').value = '';
+            document.getElementById('newButtonAmount').value = '';
+
+            renderQuickButtons();
+            showMessage('เพิ่มปุ่มด่วนเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Remove quick button
+        function removeQuickButton(buttonId) {
+            if (buttonId.startsWith('custom_')) {
+                // Remove custom button
+                customQuickButtons = customQuickButtons.filter(btn => btn.id !== buttonId);
+            } else {
+                // Hide default button by adding to hidden list
+                let hiddenButtons = JSON.parse(localStorage.getItem('hiddenDefaultButtons') || '[]');
+                if (!hiddenButtons.includes(buttonId)) {
+                    hiddenButtons.push(buttonId);
+                    localStorage.setItem('hiddenDefaultButtons', JSON.stringify(hiddenButtons));
+                }
+            }
+            saveData();
+            renderQuickButtons();
+        }
+
+        // Edit quick button
+        function editQuickButton(buttonId) {
+            let button;
+            if (buttonId.startsWith('custom_')) {
+                button = customQuickButtons.find(btn => btn.id === buttonId);
+            } else {
+                button = defaultQuickButtons.find(btn => btn.id === buttonId);
+            }
+            
+            if (!button) return;
+            
+            // Show edit dialog
+            const dialogDiv = document.createElement('div');
+            dialogDiv.id = 'editButtonDialog';
+            dialogDiv.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+            dialogDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">✏️ แก้ไขปุ่มด่วน</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อปุ่ม</label>
+                            <input type="text" id="editButtonName" value="${button.name}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนเงิน (บาท)</label>
+                            <input type="number" id="editButtonAmount" value="${button.amount}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">หมวดหมู่</label>
+                            <select id="editButtonCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="food" ${button.category === 'food' ? 'selected' : ''}>🍽️ อาหาร</option>
+                                <option value="transport" ${button.category === 'transport' ? 'selected' : ''}>🚗 เดินทาง</option>
+                                <option value="housing" ${button.category === 'housing' ? 'selected' : ''}>🏠 ที่พัก</option>
+                                <option value="entertainment" ${button.category === 'entertainment' ? 'selected' : ''}>🎮 บันเทิง</option>
+                                <option value="bills" ${button.category === 'bills' ? 'selected' : ''}>📄 บิล/ค่าใช้จ่าย</option>
+                                <option value="shopping" ${button.category === 'shopping' ? 'selected' : ''}>🛍️ ช้อปปิ้ง</option>
+                                <option value="savings" ${button.category === 'savings' ? 'selected' : ''}>💰 ออมเงิน</option>
+                                <option value="others" ${button.category === 'others' ? 'selected' : ''}>📦 อื่นๆ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end mt-6">
+                        <button onclick="document.getElementById('editButtonDialog').remove()" 
+                                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition duration-200">
+                            ยกเลิก
+                        </button>
+                        <button onclick="saveEditedButton('${buttonId}')" 
+                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200">
+                            บันทึก
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialogDiv);
+        }
+
+        // Save edited button
+        function saveEditedButton(buttonId) {
+            const name = document.getElementById('editButtonName').value.trim();
+            const amount = parseFloat(document.getElementById('editButtonAmount').value);
+            const category = document.getElementById('editButtonCategory').value;
+
+            if (!name || !amount || amount <= 0) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            if (buttonId.startsWith('custom_')) {
+                // Edit custom button
+                const buttonIndex = customQuickButtons.findIndex(btn => btn.id === buttonId);
+                if (buttonIndex !== -1) {
+                    customQuickButtons[buttonIndex] = {
+                        ...customQuickButtons[buttonIndex],
+                        name: name,
+                        amount: amount,
+                        category: category
+                    };
+                }
+            } else {
+                // Convert default button to custom button
+                const newCustomButton = {
+                    id: 'custom_' + Date.now(),
+                    name: name,
+                    amount: amount,
+                    category: category
+                };
+                customQuickButtons.push(newCustomButton);
+                
+                // Hide the original default button
+                let hiddenButtons = JSON.parse(localStorage.getItem('hiddenDefaultButtons') || '[]');
+                if (!hiddenButtons.includes(buttonId)) {
+                    hiddenButtons.push(buttonId);
+                    localStorage.setItem('hiddenDefaultButtons', JSON.stringify(hiddenButtons));
+                }
+            }
+
+            saveData();
+            renderQuickButtons();
+            document.getElementById('editButtonDialog').remove();
+            showMessage('แก้ไขปุ่มด่วนเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Reset to default buttons
+        function resetToDefaultButtons() {
+            // เคลียร์รายการซ่อน
+            localStorage.removeItem('hiddenDefaultButtons');
+            // เคลียร์ปุ่มที่เพิ่มเอง
+            customQuickButtons = [];
+            localStorage.removeItem('customQuickButtons');
+            renderQuickButtons();
+        }
+
+        // Render quick buttons
+        function renderQuickButtons() {
+            const container = document.getElementById('quickButtonsContainer');
+            const hiddenButtons = JSON.parse(localStorage.getItem('hiddenDefaultButtons') || '[]');
+            const visibleDefaultButtons = defaultQuickButtons.filter(btn => !hiddenButtons.includes(btn.id));
+            const allButtons = [...visibleDefaultButtons, ...customQuickButtons];
+            
+            let buttonsHTML = '';
+            allButtons.forEach(btn => {
+                const colorClass = btn.category === 'food' ? 'bg-green-100 hover:bg-green-200 text-green-800' :
+                                 btn.category === 'transport' ? 'bg-blue-100 hover:bg-blue-200 text-blue-800' :
+                                 btn.category === 'housing' ? 'bg-purple-100 hover:bg-purple-200 text-purple-800' :
+                                 btn.category === 'entertainment' ? 'bg-pink-100 hover:bg-pink-200 text-pink-800' :
+                                 btn.category === 'bills' ? 'bg-orange-100 hover:bg-orange-200 text-orange-800' :
+                                 btn.category === 'shopping' ? 'bg-red-100 hover:bg-red-200 text-red-800' :
+                                 btn.category === 'savings' ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800' :
+                                 'bg-gray-100 hover:bg-gray-200 text-gray-800';
+                
+                buttonsHTML += `
+                    <div class="relative group">
+                        <button onclick="quickAddExpense('${btn.category}', ${btn.amount}, '${btn.name}')" 
+                                class="w-full p-3 ${colorClass} rounded-lg text-sm transition duration-200">
+                            ${btn.name}<br><span class="text-xs">${btn.amount} บาท</span>
+                        </button>
+                        <div class="absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button onclick="event.stopPropagation(); editQuickButton('${btn.id}')" 
+                                    class="bg-blue-500 text-white rounded-full w-6 h-6 text-xs hover:bg-blue-600 transition duration-200 z-10 flex items-center justify-center">✏️</button>
+                            <button onclick="event.stopPropagation(); removeQuickButton('${btn.id}')" 
+                                    class="bg-red-500 text-white rounded-full w-6 h-6 text-xs hover:bg-red-600 transition duration-200 z-10 flex items-center justify-center">×</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = buttonsHTML;
+        }
+
+        // Update today's summary
+        function updateTodaySummary() {
+            const today = new Date().toLocaleDateString('th-TH');
+            const todayExpenses = dailyExpenses.filter(exp => exp.dateString === today);
+            
+            if (todayExpenses.length === 0) {
+                document.getElementById('todaySummary').innerHTML = 'ยังไม่มีรายจ่าย';
+                return;
+            }
+            
+            const total = todayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const categoryTotals = {};
+            
+            todayExpenses.forEach(exp => {
+                categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+            });
+            
+            const categoryNames = {
+                food: '🍽️ อาหาร',
+                transport: '🚗 เดินทาง',
+                housing: '🏠 ที่พัก',
+                entertainment: '🎮 บันเทิง',
+                bills: '📄 บิล/ค่าใช้จ่าย',
+                shopping: '🛍️ ช้อปปิ้ง',
+                savings: '💰 ออมเงิน',
+                others: '📦 อื่นๆ'
+            };
+            
+            let summaryHTML = `<div class="font-bold text-gray-800 mb-2">รวม: ${total.toLocaleString()} บาท</div>`;
+            
+            Object.entries(categoryTotals).forEach(([category, amount]) => {
+                summaryHTML += `<div class="flex justify-between text-sm">
+                    <span>${categoryNames[category]}</span>
+                    <span>${amount.toLocaleString()} บาท</span>
+                </div>`;
+            });
+            
+            document.getElementById('todaySummary').innerHTML = summaryHTML;
+        }
+
+        // Show expense history
+        function showExpenseHistory(period) {
+            // Update button styles
+            document.querySelectorAll('#todayBtn, #weekBtn, #monthBtn').forEach(btn => {
+                btn.className = 'px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm';
+            });
+            document.getElementById(period + 'Btn').className = 'px-3 py-1 bg-blue-600 text-white rounded text-sm';
+            
+            const now = new Date();
+            let filteredExpenses = [];
+            
+            if (period === 'today') {
+                const today = now.toLocaleDateString('th-TH');
+                filteredExpenses = dailyExpenses.filter(exp => exp.dateString === today);
+            } else if (period === 'week') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                filteredExpenses = dailyExpenses.filter(exp => new Date(exp.date) >= weekAgo);
+            } else if (period === 'month') {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                filteredExpenses = dailyExpenses.filter(exp => new Date(exp.date) >= monthAgo);
+            }
+            
+            const historyDiv = document.getElementById('expenseHistory');
+            
+            if (filteredExpenses.length === 0) {
+                historyDiv.innerHTML = '<div class="text-center text-gray-500 py-4">ไม่มีรายจ่ายในช่วงเวลานี้</div>';
+                return;
+            }
+            
+            const categoryNames = {
+                food: '🍽️ อาหาร',
+                transport: '🚗 เดินทาง',
+                housing: '🏠 ที่พัก',
+                entertainment: '🎮 บันเทิง',
+                bills: '📄 บิล/ค่าใช้จ่าย',
+                shopping: '🛍️ ช้อปปิ้ง',
+                savings: '💰 ออมเงิน',
+                others: '📦 อื่นๆ'
+            };
+            
+            let historyHTML = '';
+            filteredExpenses.forEach(exp => {
+                const time = new Date(exp.date).toLocaleTimeString('th-TH', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                historyHTML += `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">${categoryNames[exp.category] || '📦 อื่นๆ'}</span>
+                                <span class="text-sm text-gray-500">${time}</span>
+                            </div>
+                            <div class="text-sm text-gray-600">${exp.note}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-gray-800">${exp.amount.toLocaleString()} บาท</div>
+                            <button onclick="deleteExpense('${exp.id}')" class="text-red-500 hover:text-red-700 text-xs bg-red-50 hover:bg-red-100 px-2 py-1 rounded mt-1">ลบ</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyDiv.innerHTML = historyHTML;
+        }
+
+        // Delete expense
+        async function deleteExpense(expenseId) {
+            // Find the expense before deleting
+            const expenseToDelete = dailyExpenses.find(exp => exp.id.toString() === expenseId.toString());
+            
+            dailyExpenses = dailyExpenses.filter(exp => exp.id.toString() !== expenseId.toString());
+            
+            // Save to localStorage first
+            localStorage.setItem('dailyExpenses', JSON.stringify(dailyExpenses));
+            
+            // Try to sync deletion to Google Sheets
+            if (isOnlineMode && expenseToDelete) {
+                try {
+                    const result = await callGoogleScript('deleteExpense', { id: expenseId });
+                    if (result && result.success) {
+                        console.log('Expense deletion synced to Google Sheets successfully');
+                    } else {
+                        console.error('Failed to sync expense deletion to Google Sheets');
+                    }
+                } catch (error) {
+                    console.error('Error syncing expense deletion:', error);
+                }
+            }
+            
+            updateDisplay();
+            showMessage('ลบรายจ่ายเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Clear all expenses
+        function clearAllExpenses() {
+            // Show confirmation dialog
+            showConfirmDialog(
+                '⚠️ ต้องการลบประวัติรายจ่ายทั้งหมดหรือไม่?',
+                'ข้อมูลจะหายไปทั้งหมดและไม่สามารถกู้คืนได้!',
+                function() {
+                    dailyExpenses = [];
+                    saveData();
+                    updateDisplay();
+                    calculateFinances();
+                    showMessage('✅ ลบประวัติรายจ่ายทั้งหมดเรียบร้อยแล้ว!', 'success');
+                }
+            );
+        }
+
+        // Auto calculate from quick setup
+        function autoCalculate() {
+            const quickSalary = parseFloat(document.getElementById('quickSalary').value) || 0;
+            const quickExtra = parseFloat(document.getElementById('quickExtra').value) || 0;
+            const totalIncome = quickSalary + quickExtra;
+
+            if (totalIncome > 0) {
+                document.getElementById('salary').value = quickSalary;
+                document.getElementById('extraIncome').value = quickExtra;
+                
+                // Recommended expense ratios
+                document.getElementById('food').value = Math.round(totalIncome * 0.25);
+                document.getElementById('transport').value = Math.round(totalIncome * 0.10);
+                document.getElementById('housing').value = Math.round(totalIncome * 0.30);
+                document.getElementById('others').value = Math.round(totalIncome * 0.15);
+                document.getElementById('entertainment').value = Math.round(totalIncome * 0.10);
+                
+                calculateFinances();
+            }
+        }
+
+        // Reset to recommended values
+        function resetToRecommended() {
+            const salary = parseFloat(document.getElementById('salary').value) || 30000;
+            const extraIncome = parseFloat(document.getElementById('extraIncome').value) || 0;
+            const totalIncome = salary + extraIncome;
+
+            document.getElementById('food').value = Math.round(totalIncome * 0.25);
+            document.getElementById('transport').value = Math.round(totalIncome * 0.10);
+            document.getElementById('housing').value = Math.round(totalIncome * 0.30);
+            document.getElementById('others').value = Math.round(totalIncome * 0.15);
+            document.getElementById('entertainment').value = Math.round(totalIncome * 0.10);
+            
+            calculateFinances();
+        }
+
+        // Calculate finances
+        function calculateFinances() {
+            const salary = parseFloat(document.getElementById('salary').value) || 0;
+            const extraIncome = parseFloat(document.getElementById('extraIncome').value) || 0;
+            const totalIncome = salary + extraIncome;
+
+            const food = parseFloat(document.getElementById('food').value) || 0;
+            const transport = parseFloat(document.getElementById('transport').value) || 0;
+            const housing = parseFloat(document.getElementById('housing').value) || 0;
+            const others = parseFloat(document.getElementById('others').value) || 0;
+            const entertainment = parseFloat(document.getElementById('entertainment').value) || 0;
+            const totalExpenses = food + transport + housing + others + entertainment;
+
+            const remaining = totalIncome - totalExpenses;
+            const savingPercentage = totalIncome > 0 ? ((remaining / totalIncome) * 100).toFixed(1) : 0;
+
+            document.getElementById('totalIncome').textContent = totalIncome.toLocaleString() + ' บาท';
+            document.getElementById('totalExpenses').textContent = totalExpenses.toLocaleString() + ' บาท';
+            document.getElementById('remaining').textContent = remaining.toLocaleString() + ' บาท';
+            document.getElementById('savingPercentage').textContent = savingPercentage + '%';
+
+            updateExpenseChart(food, transport, housing, others, entertainment);
+            updateSavingsAnalysis(remaining, totalIncome, savingPercentage);
+        }
+
+        // Update expense chart
+        function updateExpenseChart(food, transport, housing, others, entertainment) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ค่าอาหาร', 'ค่าเดินทาง', 'ค่าที่พัก', 'ค่าใช้จ่ายอื่นๆ', 'ความบันเทิง'],
+                    datasets: [{
+                        data: [food, transport, housing, others, entertainment],
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update savings analysis
+        function updateSavingsAnalysis(remaining, totalIncome, savingPercentage) {
+            const analysisDiv = document.getElementById('savingsAnalysis');
+            let analysis = '';
+
+            if (remaining <= 0) {
+                analysis = `
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h4 class="font-medium text-red-800 mb-2">⚠️ สถานการณ์วิกฤต!</h4>
+                        <p class="text-red-700 text-sm mb-3">รายจ่ายของคุณเกินรายรับ ${Math.abs(remaining).toLocaleString()} บาท</p>
+                        <div class="text-sm text-red-600">
+                            <p>• ลดรายจ่ายที่ไม่จำเป็นทันที</p>
+                            <p>• หารายได้เสริม</p>
+                            <p>• ทบทวนรายจ่ายทุกหมวด</p>
+                        </div>
+                    </div>
+                `;
+            } else if (savingPercentage < 10) {
+                analysis = `
+                    <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h4 class="font-medium text-yellow-800 mb-2">⚡ ต้องปรับปรุง</h4>
+                        <p class="text-yellow-700 text-sm mb-3">คุณออมได้เพียง ${savingPercentage}% ซึ่งน้อยเกินไป</p>
+                        <div class="text-sm text-yellow-600">
+                            <p>• เป้าหมายที่ดี: ออม 20% ของรายรับ</p>
+                            <p>• ลดค่าความบันเทิงและรายจ่ายฟุ่มเฟือย</p>
+                            <p>• ตั้งงบประมาณรายจ่ายแต่ละหมวด</p>
+                        </div>
+                    </div>
+                `;
+            } else if (savingPercentage < 20) {
+                analysis = `
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="font-medium text-blue-800 mb-2">👍 ดีแล้ว แต่ยังปรับปรุงได้</h4>
+                        <p class="text-blue-700 text-sm mb-3">คุณออมได้ ${savingPercentage}% ใกล้เป้าหมาย 20% แล้ว</p>
+                        <div class="text-sm text-blue-600">
+                            <p>• พยายามเพิ่มการออมอีก ${(20 - parseFloat(savingPercentage)).toFixed(1)}%</p>
+                            <p>• หาช่องทางลงทุนเพิ่มผลตอบแทน</p>
+                            <p>• ตั้งเป้าหมายการออมระยะยาว</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                analysis = `
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <h4 class="font-medium text-green-800 mb-2">🎉 ยอดเยี่ยม!</h4>
+                        <p class="text-green-700 text-sm mb-3">คุณออมได้ ${savingPercentage}% เกินเป้าหมาย 20% แล้ว</p>
+                        <div class="text-sm text-green-600">
+                            <p>• คุณมีวินัยทางการเงินที่ดีมาก</p>
+                            <p>• พิจารณาลงทุนเพื่อเพิ่มผลตอบแทน</p>
+                            <p>• ตั้งเป้าหมายการออมระยะยาวที่ใหญ่ขึ้น</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const monthlySavings = remaining;
+            const yearlySavings = monthlySavings * 12;
+            
+            analysis += `
+                <div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h4 class="font-medium text-gray-800 mb-2">📅 การออมในอนาคต</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-600">ออมต่อเดือน:</span>
+                            <div class="font-bold text-gray-800">${monthlySavings.toLocaleString()} บาท</div>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">ออมต่อปี:</span>
+                            <div class="font-bold text-gray-800">${yearlySavings.toLocaleString()} บาท</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            analysisDiv.innerHTML = analysis;
+        }
+
+        // Add new goal
+        function addNewGoal() {
+            const dialogDiv = document.createElement('div');
+            dialogDiv.id = 'addGoalDialog';
+            dialogDiv.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+            dialogDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 เพิ่มเป้าหมายใหม่</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อเป้าหมาย</label>
+                            <input type="text" id="newGoalName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="เช่น ซื้อโทรศัพท์ใหม่">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">อีโมจิ (ไม่บังคับ)</label>
+                            <div class="grid grid-cols-8 gap-1 mb-2 p-2 bg-gray-50 rounded-lg">
+                                <button type="button" onclick="setGoalEmoji('🎯')" class="p-2 hover:bg-gray-200 rounded text-lg">🎯</button>
+                                <button type="button" onclick="setGoalEmoji('📱')" class="p-2 hover:bg-gray-200 rounded text-lg">📱</button>
+                                <button type="button" onclick="setGoalEmoji('🚗')" class="p-2 hover:bg-gray-200 rounded text-lg">🚗</button>
+                                <button type="button" onclick="setGoalEmoji('🏠')" class="p-2 hover:bg-gray-200 rounded text-lg">🏠</button>
+                                <button type="button" onclick="setGoalEmoji('✈️')" class="p-2 hover:bg-gray-200 rounded text-lg">✈️</button>
+                                <button type="button" onclick="setGoalEmoji('🏖️')" class="p-2 hover:bg-gray-200 rounded text-lg">🏖️</button>
+                                <button type="button" onclick="setGoalEmoji('💍')" class="p-2 hover:bg-gray-200 rounded text-lg">💍</button>
+                                <button type="button" onclick="setGoalEmoji('🎓')" class="p-2 hover:bg-gray-200 rounded text-lg">🎓</button>
+                                <button type="button" onclick="setGoalEmoji('💻')" class="p-2 hover:bg-gray-200 rounded text-lg">💻</button>
+                                <button type="button" onclick="setGoalEmoji('📷')" class="p-2 hover:bg-gray-200 rounded text-lg">📷</button>
+                                <button type="button" onclick="setGoalEmoji('🎸')" class="p-2 hover:bg-gray-200 rounded text-lg">🎸</button>
+                                <button type="button" onclick="setGoalEmoji('👗')" class="p-2 hover:bg-gray-200 rounded text-lg">👗</button>
+                                <button type="button" onclick="setGoalEmoji('💄')" class="p-2 hover:bg-gray-200 rounded text-lg">💄</button>
+                                <button type="button" onclick="setGoalEmoji('⌚')" class="p-2 hover:bg-gray-200 rounded text-lg">⌚</button>
+                                <button type="button" onclick="setGoalEmoji('🎮')" class="p-2 hover:bg-gray-200 rounded text-lg">🎮</button>
+                                <button type="button" onclick="setGoalEmoji('💰')" class="p-2 hover:bg-gray-200 rounded text-lg">💰</button>
+                            </div>
+                            <input type="text" id="newGoalEmoji" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="📱" maxlength="2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เป้าหมาย (บาท)</label>
+                            <input type="number" id="newGoalTarget" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="30000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินที่มีอยู่แล้ว (บาท)</label>
+                            <input type="number" id="newGoalCurrent" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end mt-6">
+                        <button onclick="document.getElementById('addGoalDialog').remove()" 
+                                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition duration-200">
+                            ยกเลิก
+                        </button>
+                        <button onclick="saveNewGoal()" 
+                                class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition duration-200">
+                            เพิ่มเป้าหมาย
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialogDiv);
+        }
+
+        // Save new goal
+        function saveNewGoal() {
+            const name = document.getElementById('newGoalName').value.trim();
+            const emoji = document.getElementById('newGoalEmoji').value.trim() || '🎯';
+            const target = parseFloat(document.getElementById('newGoalTarget').value);
+            const current = parseFloat(document.getElementById('newGoalCurrent').value) || 0;
+
+            if (!name || !target || target <= 0) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            const newGoal = {
+                id: 'goal_' + Date.now(),
+                name: name,
+                emoji: emoji,
+                target: target,
+                current: current,
+                monthlyContribution: 0
+            };
+
+            savingsGoals.push(newGoal);
+            saveData();
+            renderGoals();
+            document.getElementById('addGoalDialog').remove();
+            showMessage('เพิ่มเป้าหมายเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Edit goal
+        function editGoal(goalId) {
+            const goal = savingsGoals.find(g => g.id === goalId);
+            if (!goal) return;
+
+            const dialogDiv = document.createElement('div');
+            dialogDiv.id = 'editGoalDialog';
+            dialogDiv.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+            dialogDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">✏️ แก้ไขเป้าหมาย</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อเป้าหมาย</label>
+                            <input type="text" id="editGoalName" value="${goal.name}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">อีโมจิ</label>
+                            <div class="grid grid-cols-8 gap-1 mb-2 p-2 bg-gray-50 rounded-lg">
+                                <button type="button" onclick="setEditGoalEmoji('🎯')" class="p-2 hover:bg-gray-200 rounded text-lg">🎯</button>
+                                <button type="button" onclick="setEditGoalEmoji('📱')" class="p-2 hover:bg-gray-200 rounded text-lg">📱</button>
+                                <button type="button" onclick="setEditGoalEmoji('🚗')" class="p-2 hover:bg-gray-200 rounded text-lg">🚗</button>
+                                <button type="button" onclick="setEditGoalEmoji('🏠')" class="p-2 hover:bg-gray-200 rounded text-lg">🏠</button>
+                                <button type="button" onclick="setEditGoalEmoji('✈️')" class="p-2 hover:bg-gray-200 rounded text-lg">✈️</button>
+                                <button type="button" onclick="setEditGoalEmoji('🏖️')" class="p-2 hover:bg-gray-200 rounded text-lg">🏖️</button>
+                                <button type="button" onclick="setEditGoalEmoji('💍')" class="p-2 hover:bg-gray-200 rounded text-lg">💍</button>
+                                <button type="button" onclick="setEditGoalEmoji('🎓')" class="p-2 hover:bg-gray-200 rounded text-lg">🎓</button>
+                                <button type="button" onclick="setEditGoalEmoji('💻')" class="p-2 hover:bg-gray-200 rounded text-lg">💻</button>
+                                <button type="button" onclick="setEditGoalEmoji('📷')" class="p-2 hover:bg-gray-200 rounded text-lg">📷</button>
+                                <button type="button" onclick="setEditGoalEmoji('🎸')" class="p-2 hover:bg-gray-200 rounded text-lg">🎸</button>
+                                <button type="button" onclick="setEditGoalEmoji('👗')" class="p-2 hover:bg-gray-200 rounded text-lg">👗</button>
+                                <button type="button" onclick="setEditGoalEmoji('💄')" class="p-2 hover:bg-gray-200 rounded text-lg">💄</button>
+                                <button type="button" onclick="setEditGoalEmoji('⌚')" class="p-2 hover:bg-gray-200 rounded text-lg">⌚</button>
+                                <button type="button" onclick="setEditGoalEmoji('🎮')" class="p-2 hover:bg-gray-200 rounded text-lg">🎮</button>
+                                <button type="button" onclick="setEditGoalEmoji('💰')" class="p-2 hover:bg-gray-200 rounded text-lg">💰</button>
+                            </div>
+                            <input type="text" id="editGoalEmoji" value="${goal.emoji}" class="w-full px-3 py-2 border border-gray-300 rounded-lg" maxlength="2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เป้าหมาย (บาท)</label>
+                            <input type="number" id="editGoalTarget" value="${goal.target}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">เงินที่มีอยู่ (บาท)</label>
+                            <input type="number" id="editGoalCurrent" value="${goal.current}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ออมต่อเดือน (บาท)</label>
+                            <input type="number" id="editGoalMonthly" value="${goal.monthlyContribution}" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end mt-6">
+                        <button onclick="document.getElementById('editGoalDialog').remove()" 
+                                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition duration-200">
+                            ยกเลิก
+                        </button>
+                        <button onclick="saveEditedGoal('${goalId}')" 
+                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition duration-200">
+                            บันทึก
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialogDiv);
+        }
+
+        // Save edited goal
+        function saveEditedGoal(goalId) {
+            const name = document.getElementById('editGoalName').value.trim();
+            const emoji = document.getElementById('editGoalEmoji').value.trim();
+            const target = parseFloat(document.getElementById('editGoalTarget').value);
+            const current = parseFloat(document.getElementById('editGoalCurrent').value) || 0;
+            const monthly = parseFloat(document.getElementById('editGoalMonthly').value) || 0;
+
+            if (!name || !target || target <= 0) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            const goalIndex = savingsGoals.findIndex(g => g.id === goalId);
+            if (goalIndex !== -1) {
+                savingsGoals[goalIndex] = {
+                    ...savingsGoals[goalIndex],
+                    name: name,
+                    emoji: emoji,
+                    target: target,
+                    current: current,
+                    monthlyContribution: monthly
+                };
+            }
+
+            saveData();
+            renderGoals();
+            document.getElementById('editGoalDialog').remove();
+            showMessage('แก้ไขเป้าหมายเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Delete goal
+        function deleteGoal(goalId) {
+            showConfirmDialog(
+                '⚠️ ต้องการลบเป้าหมายนี้หรือไม่?',
+                'ข้อมูลจะหายไปและไม่สามารถกู้คืนได้!',
+                () => {
+                    savingsGoals = savingsGoals.filter(g => g.id !== goalId);
+                    saveData();
+                    renderGoals();
+                    showMessage('ลบเป้าหมายเรียบร้อยแล้ว!', 'success');
+                }
+            );
+        }
+
+        // Add money to goal
+        function addMoneyToGoal(goalId) {
+            const goal = savingsGoals.find(g => g.id === goalId);
+            if (!goal) return;
+
+            const dialogDiv = document.createElement('div');
+            dialogDiv.id = 'addMoneyDialog';
+            dialogDiv.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+            dialogDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">💰 เพิ่มเงินออม</h3>
+                    <p class="text-gray-600 mb-4">เป้าหมาย: ${goal.emoji} ${goal.name}</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนเงินที่จะเพิ่ม (บาท)</label>
+                            <input type="number" id="addMoneyAmount" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="1000">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 justify-end mt-6">
+                        <button onclick="document.getElementById('addMoneyDialog').remove()" 
+                                class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg transition duration-200">
+                            ยกเลิก
+                        </button>
+                        <button onclick="saveAddedMoney('${goalId}')" 
+                                class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition duration-200">
+                            เพิ่มเงิน
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialogDiv);
+        }
+
+        // Save added money
+        function saveAddedMoney(goalId) {
+            const amount = parseFloat(document.getElementById('addMoneyAmount').value);
+            
+            if (!amount || amount <= 0) {
+                showMessage('กรุณากรอกจำนวนเงินที่ถูกต้อง', 'error');
+                return;
+            }
+
+            const goalIndex = savingsGoals.findIndex(g => g.id === goalId);
+            if (goalIndex !== -1) {
+                savingsGoals[goalIndex].current += amount;
+                if (savingsGoals[goalIndex].current > savingsGoals[goalIndex].target) {
+                    savingsGoals[goalIndex].current = savingsGoals[goalIndex].target;
+                }
+            }
+
+            saveData();
+            renderGoals();
+            document.getElementById('addMoneyDialog').remove();
+            showMessage('เพิ่มเงินออมเรียบร้อยแล้ว!', 'success');
+        }
+
+        // Render goals
+        function renderGoals() {
+            const container = document.getElementById('goalsContainer');
+            
+            if (savingsGoals.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">ยังไม่มีเป้าหมายการออมเงิน<br>คลิก "เพิ่มเป้าหมาย" เพื่อเริ่มต้น</div>';
+                return;
+            }
+
+            let goalsHTML = '';
+            savingsGoals.forEach(goal => {
+                const progress = (goal.current / goal.target) * 100;
+                const remaining = goal.target - goal.current;
+                const monthsToComplete = goal.monthlyContribution > 0 ? Math.ceil(remaining / goal.monthlyContribution) : 0;
+                
+                goalsHTML += `
+                    <div class="border border-gray-200 rounded-lg p-4 ${progress >= 100 ? 'bg-green-50 border-green-300' : ''}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl">${goal.emoji}</span>
+                                <div>
+                                    <h4 class="font-medium text-gray-800">${goal.name}</h4>
+                                    <p class="text-sm text-gray-600">${goal.current.toLocaleString()} / ${goal.target.toLocaleString()} บาท</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="addMoneyToGoal('${goal.id}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs">💰</button>
+                                <button onclick="editGoal('${goal.id}')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs">✏️</button>
+                                <button onclick="deleteGoal('${goal.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs">🗑️</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-gray-200 rounded-full h-3 mb-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500" style="width: ${Math.min(progress, 100)}%"></div>
+                        </div>
+                        
+                        <div class="flex justify-between text-sm text-gray-600 mb-2">
+                            <span>${progress.toFixed(1)}% สำเร็จแล้ว</span>
+                            <span>เหลือ ${remaining.toLocaleString()} บาท</span>
+                        </div>
+                        
+                        ${goal.monthlyContribution > 0 ? `
+                            <div class="text-sm text-blue-600">
+                                📅 ออมเดือนละ ${goal.monthlyContribution.toLocaleString()} บาท → สำเร็จใน ${monthsToComplete} เดือน
+                            </div>
+                        ` : ''}
+                        
+                        ${progress >= 100 ? `
+                            <div class="mt-2 p-2 bg-green-100 rounded text-green-800 text-sm font-medium text-center">
+                                🎉 ยินดีด้วย! เป้าหมายสำเร็จแล้ว!
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = goalsHTML;
+        }
+
+        // Update all displays
+        function updateDisplay() {
+            updateTodaySummary();
+            showExpenseHistory('today');
+        }
+
+        // Set emoji for new goal
+        function setGoalEmoji(emoji) {
+            document.getElementById('newGoalEmoji').value = emoji;
+        }
+
+        // Set emoji for editing goal
+        function setEditGoalEmoji(emoji) {
+            document.getElementById('editGoalEmoji').value = emoji;
+        }
+
+        // Add emoji to button name
+        function addEmojiToButtonName(emoji) {
+            const nameInput = document.getElementById('newButtonName');
+            const currentValue = nameInput.value;
+            nameInput.value = emoji + ' ' + currentValue.replace(/^[^\w\s]*\s*/, ''); // Remove existing emoji if any
+            nameInput.focus();
+        }
+
+        // Quick calculate savings time
+        function quickCalculateTime() {
+            const target = parseFloat(document.getElementById('quickCalcTarget').value) || 0;
+            const monthly = parseFloat(document.getElementById('quickCalcMonthly').value) || 0;
+            const current = parseFloat(document.getElementById('quickCalcCurrent').value) || 0;
+            
+            const resultDiv = document.getElementById('quickCalcResult');
+            
+            if (target <= 0 || monthly <= 0) {
+                resultDiv.innerHTML = '<div class="text-blue-700">💡 กรอกข้อมูลเพื่อคำนวณเวลา</div>';
+                return;
+            }
+            
+            if (current >= target) {
+                resultDiv.innerHTML = '<div class="text-green-700 font-bold">🎉 คุณมีเงินครบเป้าหมายแล้ว!</div>';
+                return;
+            }
+            
+            const remaining = target - current;
+            const months = Math.ceil(remaining / monthly);
+            const years = Math.floor(months / 12);
+            const remainingMonths = months % 12;
+            
+            let timeText = '';
+            if (years > 0) {
+                timeText = `${years} ปี ${remainingMonths} เดือน`;
+            } else {
+                timeText = `${months} เดือน`;
+            }
+            
+            const totalSaved = monthly * months;
+            const progress = (current / target) * 100;
+            
+            resultDiv.innerHTML = `
+                <div class="space-y-2">
+                    <div class="text-2xl font-bold text-blue-800">⏰ ${timeText}</div>
+                    <div class="text-sm text-gray-600">
+                        <div>💰 เงินที่ต้องออมอีก: ${remaining.toLocaleString()} บาท</div>
+                        <div>📊 ความคืบหน้าปัจจุบัน: ${progress.toFixed(1)}%</div>
+                        <div>💵 รวมเงินออมทั้งหมด: ${totalSaved.toLocaleString()} บาท</div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: ${Math.min(progress, 100)}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize app
+        async function initApp() {
+            // Load local data first
+            loadData();
+            renderQuickButtons();
+            renderGoals();
+            updateDisplay();
+            updateIncomeDisplay();
+            updateExtraIncomeInMainForm();
+            
+            // Set default values
+            document.getElementById('salary').value = '30000';
+            document.getElementById('food').value = '8000';
+            document.getElementById('transport').value = '3000';
+            document.getElementById('housing').value = '8000';
+            document.getElementById('others').value = '5000';
+            document.getElementById('entertainment').value = '4000';
+            
+            calculateFinances();
+            
+            // Test Google Sheets connection
+            await testConnection();
+        }
+
+        // Start the app
+        initApp();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'961bb9da15d27322',t:'MTc1Mjk0MzkxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
