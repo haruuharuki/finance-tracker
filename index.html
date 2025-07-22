@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แอพวิเคราะห์การเงินและออมเงิน</title>
+    <title>Pang9 finances</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -453,82 +453,54 @@
         let currentTab = 'expense';
         
         // Google Apps Script Configuration
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbznU6vh1JPhMe7WmVZp-OdrjTf64seie3rR1mifed96G02ZsZviIxIySR5-2crp_ng/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPJTtfkONZjvNU8KKuOZi6V6TG8v0xWuTCfp86r22xq3WcdfJxi7Nh3eMx1K2OQ2I5/exec';
         const GOOGLE_SHEET_ID = '1Lj18zZfSLQvVhgdmUGZvTbAZd92eFunJchdomy2Uk_U';
         let isOnlineMode = false; // จะเปลี่ยนเป็น true เมื่อเชื่อมต่อสำเร็จ
 
-        // Google Sheets API Functions
-        async function callGoogleScript(action, data = {}) {
-            if (!GOOGLE_SCRIPT_URL) {
-                console.log('Google Script URL not configured, using localStorage');
-                return null;
-            }
-            
-            try {
-                // Use JSONP method directly to avoid CORS issues
-                return await callGoogleScriptJSONP(action, data);
-                
-            } catch (error) {
-                console.error('Google Script API Error:', error);
-                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้ กำลังใช้งานแบบ offline', 'warning');
-                return null;
-            }
-        }
+        // ฟังก์ชันเรียก Google Script ผ่าน JSONP (เลี่ยง CORS)
+		async function callGoogleScript(action, data = {}) {
+		if (!GOOGLE_SCRIPT_URL) {
+		console.log('Google Script URL not configured, using localStorage');
+		return null;
+		}
+		try {
+		return await callGoogleScriptJSONP(action, data);
+		} catch (err) {
+		console.error('Google Script API Error:', err);
+		showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้ กำลังใช้งานแบบ offline', 'warning');
+		return null;
+		}
+		}
 
         // Alternative JSONP-style method for Google Apps Script
-        function callGoogleScriptJSONP(action, data = {}) {
-            return new Promise((resolve, reject) => {
-                // Create a unique callback name
-                const callbackName = 'googleScriptCallback_' + Date.now();
-                console.log('Creating JSONP request:', { action, data, callbackName });
-                
-                // Create the callback function
-                window[callbackName] = function(response) {
-                    console.log('JSONP response received:', response);
-                    // Clean up
-                    if (document.head.contains(script)) {
-                        document.head.removeChild(script);
-                    }
-                    delete window[callbackName];
-                    resolve(response);
-                };
-                
-                // Create script element
-                const script = document.createElement('script');
-                const params = new URLSearchParams({
-                    action: action,
-                    data: JSON.stringify(data),
-                    callback: callbackName
-                });
-                
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                console.log('JSONP URL:', url);
-                script.src = url;
-                
-                script.onerror = (error) => {
-                    console.error('Script loading error:', error);
-                    if (document.head.contains(script)) {
-                        document.head.removeChild(script);
-                    }
-                    delete window[callbackName];
-                    reject(new Error('Script loading failed'));
-                };
-                
-                // Add timeout
-                setTimeout(() => {
-                    if (window[callbackName]) {
-                        console.log('JSONP request timeout');
-                        if (document.head.contains(script)) {
-                            document.head.removeChild(script);
-                        }
-                        delete window[callbackName];
-                        reject(new Error('Request timeout'));
-                    }
-                }, 15000); // Increased timeout to 15 seconds
-                
-                document.head.appendChild(script);
-            });
-        }
+		function callGoogleScriptJSONP(action, data = {}) {
+		return new Promise((resolve, reject) => {
+		const callbackName = 'googleCallback_' + Date.now();
+		window[callbackName] = res => {
+		// clean up
+		delete window[callbackName];
+		document.head.removeChild(script);
+		resolve(res);
+		};
+
+		const script = document.createElement('script');
+		const params = new URLSearchParams({
+		action: action,
+		data: JSON.stringify(data),
+		callback: callbackName,
+		sheetId: GOOGLE_SHEET_ID
+		});
+		script.src = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
+	
+		script.onerror = e => {
+		delete window[callbackName];
+		document.head.removeChild(script);
+		reject(e);
+		};
+
+		document.head.appendChild(script);
+		});
+		}
 
         // Update connection status display
         function updateConnectionStatus(isOnline, message) {
@@ -2090,7 +2062,11 @@
         }
 
         // Start the app
-        initApp();
+          window.addEventListener('DOMContentLoaded', () => {
+		initApp();
+		});
+		
+	
     </script>
 <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'961bb9da15d27322',t:'MTc1Mjk0MzkxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
